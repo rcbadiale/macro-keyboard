@@ -1,32 +1,30 @@
-package structures
+package types
 
 import (
-	"machine"
+	"fmt"
 	"machine/usb/hid/keyboard"
 	"machine/usb/hid/mouse"
+	"macro-keyboard/internal/utils"
 	"time"
 )
-
-type Config struct {
-	PollingRate time.Duration
-	AllowRepeat bool
-	RepeatDelay time.Duration
-}
-
-type Button struct {
-	Pin         machine.Pin
-	ActionChain []Action
-	LastCall    time.Time
-}
 
 /* Action interface, every action type must have an Execute method. */
 type Action interface {
 	Execute()
+	String() string
 }
 
 /* Keycode action with Execute method. */
 type KeycodeAction struct {
 	Keycodes []keyboard.Keycode
+}
+
+func (ac *KeycodeAction) String() string {
+	output := "keycode"
+	for _, kc := range ac.Keycodes {
+		output += fmt.Sprintf("#%v", utils.KeycodeToString(kc))
+	}
+	return output
 }
 
 func (ac *KeycodeAction) Execute() {
@@ -42,6 +40,10 @@ type TextAction struct {
 	Text string
 }
 
+func (ac *TextAction) String() string {
+	return fmt.Sprintf("text#%v", ac.Text)
+}
+
 func (ac *TextAction) Execute() {
 	kb := keyboard.Port()
 	kb.Write([]byte(ac.Text))
@@ -52,6 +54,10 @@ type DelayAction struct {
 	Delay time.Duration
 }
 
+func (ac *DelayAction) String() string {
+	return fmt.Sprintf("delay#%v", ac.Delay.String())
+}
+
 func (ac *DelayAction) Execute() {
 	time.Sleep(ac.Delay)
 }
@@ -60,6 +66,19 @@ func (ac *DelayAction) Execute() {
 type MouseAction struct {
 	Coordinates [2]int
 	Click       mouse.Button
+}
+
+func (ac *MouseAction) String() string {
+	click := ""
+	switch ac.Click {
+	case mouse.Left:
+		click = "left"
+	case mouse.Right:
+		click = "right"
+	case mouse.Middle:
+		click = "middle"
+	}
+	return fmt.Sprintf("mouse#%v#%v#%v", ac.Coordinates[0], ac.Coordinates[1], click)
 }
 
 func (ac *MouseAction) Execute() {

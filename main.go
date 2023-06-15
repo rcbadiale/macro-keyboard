@@ -4,7 +4,7 @@ import (
 	"machine"
 	"machine/usb"
 	"macro-keyboard/configs"
-	"macro-keyboard/internal/structures"
+	"macro-keyboard/internal/types"
 	"strconv"
 	"time"
 )
@@ -35,7 +35,7 @@ func init() {
 	}
 }
 
-func executeActionChain(actionChain []structures.Action) {
+func executeActionChain(actionChain []types.Action) {
 	for _, action := range actionChain {
 		action.Execute()
 	}
@@ -44,7 +44,7 @@ func executeActionChain(actionChain []structures.Action) {
 /*
 Function responsible for checking if it should execute the action chain.
 */
-func processInputs(ch chan *structures.Button) {
+func processInputs(ch chan *types.Button) {
 	for {
 		btn := <-ch
 		if time.Now().Sub(btn.LastCall) > config.RepeatDelay {
@@ -63,7 +63,7 @@ func processInputs(ch chan *structures.Button) {
 /*
 Function responsible for polling the buttons state and placing them in the execution channel.
 */
-func pollButtons(ch chan *structures.Button) {
+func pollButtons(ch chan *types.Button) {
 	for idx := range buttons {
 		btn := &buttons[idx]
 		if !btn.Pin.Get() {
@@ -83,7 +83,7 @@ func main() {
 		btn.Pin.Configure(machine.PinConfig{Mode: machine.PinInputPullup})
 	}
 
-	ch := make(chan *structures.Button)
+	ch := make(chan *types.Button)
 	go processInputs(ch)
 	for {
 		pollButtons(ch)
