@@ -2,39 +2,12 @@ package main
 
 import (
 	"machine"
-	"machine/usb"
 	"macro-keyboard/configs"
 	"macro-keyboard/internal/actions"
 	btn "macro-keyboard/internal/buttons"
 	"macro-keyboard/internal/storage"
-	"strconv"
 	"time"
 )
-
-/* Device settings */
-var usbVID, usbPID string
-var usbManufacturer, usbProduct string
-
-/* Setup for HID. */
-func init() {
-	if usbVID != "" {
-		vid, _ := strconv.ParseUint(usbVID, 0, 16)
-		usb.VendorID = uint16(vid)
-	}
-
-	if usbPID != "" {
-		pid, _ := strconv.ParseUint(usbPID, 0, 16)
-		usb.ProductID = uint16(pid)
-	}
-
-	if usbManufacturer != "" {
-		usb.Manufacturer = usbManufacturer
-	}
-
-	if usbProduct != "" {
-		usb.Product = usbProduct
-	}
-}
 
 /*
 Function responsible for checking if it should execute the action chain.
