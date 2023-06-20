@@ -6,7 +6,6 @@ import (
 	"machine"
 	"macro-keyboard/internal/buttons"
 	"os"
-	"strings"
 
 	"tinygo.org/x/tinyfs/littlefs"
 )
@@ -15,21 +14,14 @@ type Flash struct {
 	filesystem *littlefs.LFS
 }
 
-func SanitizeString(s string) (out string) {
-	out = strings.ReplaceAll(s, "\t", "")
-	out = strings.ReplaceAll(out, "\n", "")
-	out = strings.ReplaceAll(out, "  ", "")
-	return out
-}
-
 func New(btn []buttons.Button, format bool) Flash {
 	f := Flash{
 		filesystem: littlefs.New(machine.Flash),
 	}
-	err := f.Start()
+	err := f.start()
 	if err != nil || format == true {
 		fmt.Printf("error while mounting: %v\nresetting flash to default state...\n", err)
-		f.Reset()
+		f.reset()
 		for idx := range btn {
 			f.WriteButton(&btn[idx])
 		}
@@ -37,7 +29,7 @@ func New(btn []buttons.Button, format bool) Flash {
 	return f
 }
 
-func (f *Flash) Start() error {
+func (f *Flash) start() error {
 	f.filesystem.Configure(&littlefs.Config{
 		CacheSize:     512,
 		LookaheadSize: 512,
@@ -52,7 +44,7 @@ func (f *Flash) Stop() error {
 	return err
 }
 
-func (f *Flash) Reset() {
+func (f *Flash) reset() {
 	err := f.filesystem.Format()
 	if err != nil {
 		fmt.Printf("error while formatting: %v\n", err)
@@ -65,7 +57,7 @@ func (f *Flash) Reset() {
 	}
 }
 
-func (f *Flash) Write(filename, data string) {
+func (f *Flash) write(filename, data string) {
 	file, err := f.filesystem.OpenFile(filename, os.O_CREATE|os.O_WRONLY|os.O_TRUNC)
 	if err != nil {
 		fmt.Printf("error opening %s: %s\n", filename, err.Error())
@@ -80,26 +72,7 @@ func (f *Flash) Write(filename, data string) {
 	fmt.Printf("written %v bytes.\n", bytes)
 }
 
-func (f *Flash) FilesList() (filenames []string) {
-	path := "/"
-	dir, err := f.filesystem.Open(path)
-	if err != nil {
-		fmt.Printf("could not open directory %s: %v\n", path, err)
-		return filenames
-	}
-	defer dir.Close()
-	infos, err := dir.Readdir(0)
-	if err != nil {
-		fmt.Printf("could not read directory %s: %v\n", path, err)
-		return filenames
-	}
-	for _, info := range infos {
-		filenames = append(filenames, info.Name())
-	}
-	return filenames
-}
-
-func (f *Flash) Read(filename string) string {
+func (f *Flash) read(filename string) string {
 	info, err := f.filesystem.Stat(filename)
 	if err != nil {
 		fmt.Printf("error getting info from %s: %s\n", filename, err.Error())
@@ -124,25 +97,16 @@ func (f *Flash) Read(filename string) string {
 	return string(buf[:len(buf)-1])
 }
 
-func (f *Flash) ReadAll() (files []string) {
-	filenames := f.FilesList()
-	for idx := range filenames {
-		files = append(files, f.Read(filenames[idx]))
-	}
-	return files
-}
-
 func (f *Flash) WriteButton(button *buttons.Button) {
 	filename := button.Name
 	fmt.Printf("\nWriting button %s to storage:\n", filename)
 	fmt.Printf("%v: %s ", filename, button.String())
-	f.Write(filename, button.String())
+	f.write(filename, button.String())
 }
 
 func (f *Flash) ReadButton(btn *buttons.Button) {
 	fmt.Printf("\nReading button %s from storage...\n", btn.Name)
-	data := f.Read(btn.Name)
-	fmt.Println(data)
+	data := f.read(btn.Name)
 	buttons.ParseButton(data, btn)
 	return
 }

@@ -5,19 +5,6 @@ import (
 	"strings"
 )
 
-// var AvailableButtons = map[string]machine.Pin{
-// 	"D1":  machine.D1,
-// 	"D2":  machine.D2,
-// 	"D3":  machine.D3,
-// 	"D4":  machine.D4,
-// 	"D5":  machine.D5,
-// 	"D6":  machine.D6,
-// 	"D7":  machine.D7,
-// 	"D8":  machine.D8,
-// 	"D9":  machine.D9,
-// 	"D10": machine.D10,
-// }
-
 func PinFromString(s string) machine.Pin {
 	switch strings.ToUpper(s) {
 	case "D1":
@@ -42,30 +29,4 @@ func PinFromString(s string) machine.Pin {
 		return machine.D10
 	}
 	return 0
-}
-
-func PinToString(p machine.Pin) string {
-	switch p {
-	case machine.D1:
-		return "D1"
-	case machine.D2:
-		return "D2"
-	case machine.D3:
-		return "D3"
-	case machine.D4:
-		return "D4"
-	case machine.D5:
-		return "D5"
-	case machine.D6:
-		return "D6"
-	case machine.D7:
-		return "D7"
-	case machine.D8:
-		return "D8"
-	case machine.D9:
-		return "D9"
-	case machine.D10:
-		return "D10"
-	}
-	return ""
 }

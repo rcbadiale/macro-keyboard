@@ -72,6 +72,8 @@ func pollButtons(ch chan *btn.Button) {
 func init() {
 	time.Sleep(time.Second * 2)
 	filesystem := storage.New(configs.Buttons, configs.Format)
+	defer filesystem.Stop()
+
 	led := machine.LED
 	led.Configure(machine.PinConfig{Mode: machine.PinOutput})
 
@@ -82,7 +84,6 @@ func init() {
 			machine.PinConfig{Mode: machine.PinInputPullup},
 		)
 	}
-	filesystem.Stop()
 }
 
 func main() {

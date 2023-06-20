@@ -11,18 +11,18 @@ func ExecuteActionChain(input []string) {
 	for _, ac_str := range input {
 		switch {
 		case strings.HasPrefix(ac_str, "keycode"):
-			ExecuteKeycodeAction(ac_str)
+			executeKeycodeAction(ac_str)
 		case strings.HasPrefix(ac_str, "mouse"):
-			ExecuteMouseAction(ac_str)
+			executeMouseAction(ac_str)
 		case strings.HasPrefix(ac_str, "text"):
-			ExecuteTextAction(ac_str)
+			executeTextAction(ac_str)
 		case strings.HasPrefix(ac_str, "delay"):
-			ExecuteDelayAction(ac_str)
+			executeDelayAction(ac_str)
 		}
 	}
 }
 
-func ExecuteKeycodeAction(action string) {
+func executeKeycodeAction(action string) {
 	keycodes := parseKeycodeAction(action)
 	kb := keyboard.Port()
 	for _, key := range keycodes {
@@ -31,13 +31,13 @@ func ExecuteKeycodeAction(action string) {
 	kb.Release()
 }
 
-func ExecuteTextAction(action string) {
+func executeTextAction(action string) {
 	text := parseTextAction(action)
 	kb := keyboard.Port()
 	kb.Write([]byte(text))
 }
 
-func ExecuteDelayAction(action string) {
+func executeDelayAction(action string) {
 	delay, err := parseDelayAction(action)
 	if err != nil {
 		return
@@ -45,7 +45,7 @@ func ExecuteDelayAction(action string) {
 	time.Sleep(delay)
 }
 
-func ExecuteMouseAction(action string) {
+func executeMouseAction(action string) {
 	coordinates, click := parseMouseAction(action)
 	mouse := mouse.Port()
 	mouse.Move(coordinates[0], coordinates[1])
