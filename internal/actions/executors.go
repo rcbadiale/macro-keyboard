@@ -7,8 +7,8 @@ import (
 	"time"
 )
 
-func ExecuteActionChain(input []string) {
-	for _, ac_str := range input {
+func ExecuteActionChain(input string) {
+	for _, ac_str := range strings.Split(input, "$$") {
 		switch {
 		case strings.HasPrefix(ac_str, "keycode"):
 			executeKeycodeAction(ac_str)

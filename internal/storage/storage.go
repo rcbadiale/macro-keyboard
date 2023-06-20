@@ -29,6 +29,27 @@ func New(btn []buttons.Button, format bool) Flash {
 	return f
 }
 
+func (f *Flash) Stop() error {
+	err := f.filesystem.Unmount()
+	return err
+}
+
+func (f *Flash) WriteButton(button *buttons.Button) {
+	filename := button.Name
+	fmt.Printf("\nWriting button %s to storage:\n", filename)
+	fmt.Printf("%v: %s ", filename, button.String())
+	f.write(filename, button.String())
+}
+
+func (f *Flash) ReadButton(btn *buttons.Button) {
+	fmt.Printf("\nReading button %s from storage...\n", btn.Name)
+	data := f.read(btn.Name)
+	buttons.ParseButton(data, btn)
+	return
+}
+
+/* internal functions */
+
 func (f *Flash) start() error {
 	f.filesystem.Configure(&littlefs.Config{
 		CacheSize:     512,
@@ -36,11 +57,6 @@ func (f *Flash) start() error {
 		BlockCycles:   100,
 	})
 	err := f.filesystem.Mount()
-	return err
-}
-
-func (f *Flash) Stop() error {
-	err := f.filesystem.Unmount()
 	return err
 }
 
@@ -95,18 +111,4 @@ func (f *Flash) read(filename string) string {
 		}
 	}
 	return string(buf[:len(buf)-1])
-}
-
-func (f *Flash) WriteButton(button *buttons.Button) {
-	filename := button.Name
-	fmt.Printf("\nWriting button %s to storage:\n", filename)
-	fmt.Printf("%v: %s ", filename, button.String())
-	f.write(filename, button.String())
-}
-
-func (f *Flash) ReadButton(btn *buttons.Button) {
-	fmt.Printf("\nReading button %s from storage...\n", btn.Name)
-	data := f.read(btn.Name)
-	buttons.ParseButton(data, btn)
-	return
 }
