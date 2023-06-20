@@ -1,6 +1,8 @@
 package utils
 
-import "machine/usb/hid/keyboard"
+import (
+	"machine/usb/hid/keyboard"
+)
 
 func KeycodeFromString(s string) keyboard.Keycode {
 	switch s {
@@ -315,8 +317,9 @@ func KeycodeFromString(s string) keyboard.Keycode {
 		return keyboard.KeyRightAlt
 	case "KeyRightGUI":
 		return keyboard.KeyRightGUI
+	default:
+		return 0
 	}
-	return 0
 }
 
 func KeycodeToString(kc keyboard.Keycode) string {

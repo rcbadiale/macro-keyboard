@@ -4,15 +4,16 @@ import (
 	"machine"
 	"machine/usb"
 	"macro-keyboard/configs"
-	"macro-keyboard/internal/types"
+	"macro-keyboard/internal/actions"
+	btn "macro-keyboard/internal/buttons"
+	"macro-keyboard/internal/storage"
 	"strconv"
 	"time"
 )
 
+/* Device settings */
 var usbVID, usbPID string
 var usbManufacturer, usbProduct string
-var buttons = configs.Buttons
-var config = configs.BaseConfig
 
 /* Setup for HID. */
 func init() {
@@ -35,27 +36,21 @@ func init() {
 	}
 }
 
-func executeActionChain(actionChain []types.Action) {
-	for _, action := range actionChain {
-		action.Execute()
-	}
-}
-
 /*
 Function responsible for checking if it should execute the action chain.
 */
-func processInputs(ch chan *types.Button) {
+func processInputs(ch chan *btn.Button) {
 	for {
-		btn := <-ch
-		if time.Now().Sub(btn.LastCall) > config.RepeatDelay {
+		b := <-ch
+		if time.Now().Sub(b.LastCall) > configs.BaseConfig.RepeatDelay {
 			machine.LED.Set(!machine.LED.Get())
-			executeActionChain(btn.ActionChain)
-			if config.AllowRepeat {
-				btn.LastCall = time.Now()
+			actions.ExecuteActionChain(b.ActionChain)
+			if configs.BaseConfig.AllowRepeat {
+				b.LastCall = time.Now()
 			}
 		}
-		if !config.AllowRepeat {
-			btn.LastCall = time.Now()
+		if !configs.BaseConfig.AllowRepeat {
+			b.LastCall = time.Now()
 		}
 	}
 }
@@ -63,27 +58,35 @@ func processInputs(ch chan *types.Button) {
 /*
 Function responsible for polling the buttons state and placing them in the execution channel.
 */
-func pollButtons(ch chan *types.Button) {
-	for idx := range buttons {
-		btn := &buttons[idx]
-		if !btn.Pin.Get() {
-			ch <- btn
+func pollButtons(ch chan *btn.Button) {
+	for idx := range configs.Buttons {
+		if !(&configs.Buttons[idx]).Pin().Get() {
+			ch <- (&configs.Buttons[idx])
 		} else {
-			btn.LastCall = btn.LastCall.Add(-config.RepeatDelay)
+			(&configs.Buttons[idx]).LastCall = (&configs.Buttons[idx]).LastCall.Add(-configs.BaseConfig.RepeatDelay)
 		}
 	}
-	time.Sleep(config.PollingRate)
+	time.Sleep(configs.BaseConfig.PollingDelay)
 }
 
-func main() {
+func init() {
+	time.Sleep(time.Second * 2)
+	filesystem := storage.New(configs.Buttons, configs.Format)
 	led := machine.LED
 	led.Configure(machine.PinConfig{Mode: machine.PinOutput})
 
-	for _, btn := range buttons {
-		btn.Pin.Configure(machine.PinConfig{Mode: machine.PinInputPullup})
+	for idx := range configs.Buttons {
+		filesystem.ReadButton(&configs.Buttons[idx])
+		time.Sleep(time.Millisecond * 100)
+		configs.Buttons[idx].Pin().Configure(
+			machine.PinConfig{Mode: machine.PinInputPullup},
+		)
 	}
+	filesystem.Stop()
+}
 
-	ch := make(chan *types.Button)
+func main() {
+	ch := make(chan *btn.Button)
 	go processInputs(ch)
 	for {
 		pollButtons(ch)
