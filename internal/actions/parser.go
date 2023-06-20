@@ -9,9 +9,11 @@ import (
 	"time"
 )
 
-func parseKeycodeAction(ac_str string) []keyboard.Keycode {
+func parseKeycodeAction(ac_str string) (keycodes []keyboard.Keycode) {
+	if !strings.Contains(ac_str, "##") {
+		return keycodes
+	}
 	keycodes_str := strings.Split(ac_str, "##")[1:]
-	var keycodes []keyboard.Keycode
 	for _, k := range keycodes_str {
 		keycodes = append(keycodes, utils.KeycodeFromString(k))
 	}
@@ -19,6 +21,9 @@ func parseKeycodeAction(ac_str string) []keyboard.Keycode {
 }
 
 func parseMouseAction(ac_str string) (coordinates [2]int, click mouse.Button) {
+	if !strings.Contains(ac_str, "##") {
+		return coordinates, click
+	}
 	m := strings.Split(ac_str, "##")[1:]
 	switch m[2] {
 	case "left":
@@ -40,12 +45,18 @@ func parseMouseAction(ac_str string) (coordinates [2]int, click mouse.Button) {
 	return coordinates, click
 }
 
-func parseTextAction(ac_str string) string {
-	text := strings.Split(ac_str, "##")[1]
+func parseTextAction(ac_str string) (text string) {
+	if !strings.Contains(ac_str, "##") {
+		return ""
+	}
+	text = strings.SplitN(ac_str, "##", 2)[1]
 	return text
 }
 
 func parseDelayAction(ac_str string) (delay time.Duration, err error) {
+	if !strings.Contains(ac_str, "##") {
+		return delay, err
+	}
 	dur_str := strings.Split(ac_str, "##")[1]
 	delay, err = time.ParseDuration(dur_str)
 	return delay, err

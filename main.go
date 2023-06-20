@@ -1,13 +1,35 @@
 package main
 
 import (
+	"fmt"
 	"machine"
 	"macro-keyboard/configs"
 	"macro-keyboard/internal/actions"
 	btn "macro-keyboard/internal/buttons"
 	"macro-keyboard/internal/storage"
+	"strings"
 	"time"
 )
+
+/*
+Configure all pins and read persistent storage.
+*/
+func init() {
+	led := machine.LED
+	led.Configure(machine.PinConfig{Mode: machine.PinOutput})
+	configs.ResetPin.Configure(machine.PinConfig{Mode: machine.PinInputPullup})
+
+	time.Sleep(time.Second * 2)
+	configs.Filesystem = storage.New(configs.Buttons, configs.Format || !configs.ResetPin.Get())
+
+	for idx := range configs.Buttons {
+		configs.Filesystem.ReadButton(&configs.Buttons[idx])
+		time.Sleep(time.Millisecond * 100)
+		configs.Buttons[idx].Pin().Configure(
+			machine.PinConfig{Mode: machine.PinInputPullup},
+		)
+	}
+}
 
 /*
 Function responsible for checking if it should execute the action chain.
@@ -42,27 +64,49 @@ func pollButtons(ch chan *btn.Button) {
 	time.Sleep(configs.BaseConfig.PollingDelay)
 }
 
-func init() {
-	time.Sleep(time.Second * 2)
-	filesystem := storage.New(configs.Buttons, configs.Format)
-	defer filesystem.Stop()
-
-	led := machine.LED
-	led.Configure(machine.PinConfig{Mode: machine.PinOutput})
-
+/*
+Function responsible for executing a command when it is sent through serial port.
+*/
+func runCommand(s string) {
+	if !strings.HasPrefix(s, "add ") {
+		fmt.Println("\nInvalid command.")
+		return
+	}
+	if !strings.Contains(s, "::") {
+		fmt.Println("\nInvalid syntax!\n  Should be: `add <name>::<actions>`")
+		return
+	}
+	btn_data := strings.SplitN(s[4:], "::", 2)
 	for idx := range configs.Buttons {
-		filesystem.ReadButton(&configs.Buttons[idx])
-		time.Sleep(time.Millisecond * 100)
-		configs.Buttons[idx].Pin().Configure(
-			machine.PinConfig{Mode: machine.PinInputPullup},
-		)
+		if btn_data[0] == configs.Buttons[idx].Name {
+			configs.Buttons[idx].ActionChain = btn_data[1]
+			configs.Filesystem.WriteButton(&configs.Buttons[idx])
+		}
 	}
 }
 
 func main() {
 	ch := make(chan *btn.Button)
+	cmd := ""
 	go processInputs(ch)
 	for {
+		// process console inputs before polling buttons
+		if configs.Console.Buffered() > 0 {
+			data, _ := configs.Console.ReadByte()
+			switch data {
+			case 8: // backspace
+				if len(cmd) > 0 {
+					cmd = cmd[:len(cmd)-1]
+					configs.Console.Write([]byte{0x8, 0x20, 0x8})
+				}
+			case 13: // enter
+				runCommand(cmd)
+				cmd = ""
+			default: // any other char
+				fmt.Print(string(data))
+				cmd += string(data)
+			}
+		}
 		pollButtons(ch)
 	}
 }

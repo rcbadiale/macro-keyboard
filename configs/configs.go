@@ -1,11 +1,16 @@
 package configs
 
 import (
+	"machine"
 	"macro-keyboard/internal/buttons"
+	"macro-keyboard/internal/storage"
 	"time"
 )
 
 var Format = false
+var ResetPin = machine.D2
+var Console = machine.Serial
+var Filesystem storage.Flash
 
 type Config struct {
 	PollingDelay time.Duration

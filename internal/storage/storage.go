@@ -36,8 +36,7 @@ func (f *Flash) Stop() error {
 
 func (f *Flash) WriteButton(button *buttons.Button) {
 	filename := button.Name
-	fmt.Printf("\nWriting button %s to storage:\n", filename)
-	fmt.Printf("%v: %s ", filename, button.String())
+	fmt.Printf("\nWriting button %s to storage: %s... ", filename, button.String())
 	f.write(filename, button.String())
 }
 
