@@ -1,61 +1,51 @@
 package main
 
 import (
+	"fmt"
 	"machine"
-	"machine/usb"
 	"macro-keyboard/configs"
-	"macro-keyboard/internal/structures"
-	"strconv"
+	"macro-keyboard/internal/actions"
+	btn "macro-keyboard/internal/buttons"
+	"macro-keyboard/internal/storage"
+	"strings"
 	"time"
 )
 
-var usbVID, usbPID string
-var usbManufacturer, usbProduct string
-var buttons = configs.Buttons
-var config = configs.BaseConfig
-
-/* Setup for HID. */
+/*
+Configure all pins and read persistent storage.
+*/
 func init() {
-	if usbVID != "" {
-		vid, _ := strconv.ParseUint(usbVID, 0, 16)
-		usb.VendorID = uint16(vid)
-	}
+	led := machine.LED
+	led.Configure(machine.PinConfig{Mode: machine.PinOutput})
+	configs.ResetPin.Configure(machine.PinConfig{Mode: machine.PinInputPullup})
 
-	if usbPID != "" {
-		pid, _ := strconv.ParseUint(usbPID, 0, 16)
-		usb.ProductID = uint16(pid)
-	}
+	time.Sleep(time.Second * 2)
+	configs.Filesystem = storage.New(configs.Buttons, configs.Format || !configs.ResetPin.Get())
 
-	if usbManufacturer != "" {
-		usb.Manufacturer = usbManufacturer
-	}
-
-	if usbProduct != "" {
-		usb.Product = usbProduct
-	}
-}
-
-func executeActionChain(actionChain []structures.Action) {
-	for _, action := range actionChain {
-		action.Execute()
+	for idx := range configs.Buttons {
+		configs.Filesystem.ReadButton(&configs.Buttons[idx])
+		time.Sleep(time.Millisecond * 100)
+		configs.Buttons[idx].Pin().Configure(
+			machine.PinConfig{Mode: machine.PinInputPullup},
+		)
 	}
 }
 
 /*
 Function responsible for checking if it should execute the action chain.
 */
-func processInputs(ch chan *structures.Button) {
+func processInputs(ch chan *btn.Button) {
 	for {
-		btn := <-ch
-		if time.Now().Sub(btn.LastCall) > config.RepeatDelay {
+		b := <-ch
+		if time.Now().Sub(b.LastCall) > configs.BaseConfig.RepeatDelay {
 			machine.LED.Set(!machine.LED.Get())
-			executeActionChain(btn.ActionChain)
-			if config.AllowRepeat {
-				btn.LastCall = time.Now()
+			actions.ExecuteActionChain(b.ActionChain)
+			if configs.BaseConfig.AllowRepeat {
+				b.LastCall = time.Now()
 			}
 		}
-		if !config.AllowRepeat {
-			btn.LastCall = time.Now()
+		if !configs.BaseConfig.AllowRepeat {
+			b.LastCall = time.Now()
 		}
 	}
 }
@@ -63,29 +53,60 @@ func processInputs(ch chan *structures.Button) {
 /*
 Function responsible for polling the buttons state and placing them in the execution channel.
 */
-func pollButtons(ch chan *structures.Button) {
-	for idx := range buttons {
-		btn := &buttons[idx]
-		if !btn.Pin.Get() {
-			ch <- btn
+func pollButtons(ch chan *btn.Button) {
+	for idx := range configs.Buttons {
+		if !(&configs.Buttons[idx]).Pin().Get() {
+			ch <- (&configs.Buttons[idx])
 		} else {
-			btn.LastCall = btn.LastCall.Add(-config.RepeatDelay)
+			(&configs.Buttons[idx]).LastCall = (&configs.Buttons[idx]).LastCall.Add(-configs.BaseConfig.RepeatDelay)
 		}
 	}
-	time.Sleep(config.PollingRate)
+	time.Sleep(configs.BaseConfig.PollingDelay)
+}
+
+/*
+Function responsible for executing a command when it is sent through serial port.
+*/
+func runCommand(s string) {
+	if !strings.HasPrefix(s, "add ") {
+		fmt.Println("\nInvalid command.")
+		return
+	}
+	if !strings.Contains(s, "::") {
+		fmt.Println("\nInvalid syntax!\n  Should be: `add <name>::<actions>`")
+		return
+	}
+	btn_data := strings.SplitN(s[4:], "::", 2)
+	for idx := range configs.Buttons {
+		if btn_data[0] == configs.Buttons[idx].Name {
+			configs.Buttons[idx].ActionChain = btn_data[1]
+			configs.Filesystem.WriteButton(&configs.Buttons[idx])
+		}
+	}
 }
 
 func main() {
-	led := machine.LED
-	led.Configure(machine.PinConfig{Mode: machine.PinOutput})
-
-	for _, btn := range buttons {
-		btn.Pin.Configure(machine.PinConfig{Mode: machine.PinInputPullup})
-	}
-
-	ch := make(chan *structures.Button)
+	ch := make(chan *btn.Button)
+	cmd := ""
 	go processInputs(ch)
 	for {
+		// process console inputs before polling buttons
+		if configs.Console.Buffered() > 0 {
+			data, _ := configs.Console.ReadByte()
+			switch data {
+			case 8: // backspace
+				if len(cmd) > 0 {
+					cmd = cmd[:len(cmd)-1]
+					configs.Console.Write([]byte{0x8, 0x20, 0x8})
+				}
+			case 13: // enter
+				runCommand(cmd)
+				cmd = ""
+			default: // any other char
+				fmt.Print(string(data))
+				cmd += string(data)
+			}
+		}
 		pollButtons(ch)
 	}
 }

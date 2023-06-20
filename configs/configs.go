@@ -2,74 +2,67 @@ package configs
 
 import (
 	"machine"
-	"machine/usb/hid/keyboard"
-	"macro-keyboard/internal/structures"
+	"macro-keyboard/internal/buttons"
+	"macro-keyboard/internal/storage"
 	"time"
 )
 
-var BaseConfig = structures.Config{
-	PollingRate: time.Millisecond * 50,  // define time in between polling
-	AllowRepeat: true,                   // define if the input will be repeated when held
-	RepeatDelay: time.Millisecond * 500, // define time in between repeats
+var Format = false
+var ResetPin = machine.D2
+var Console = machine.Serial
+var Filesystem storage.Flash
+
+type Config struct {
+	PollingDelay time.Duration
+	AllowRepeat  bool
+	RepeatDelay  time.Duration
 }
 
-var Buttons = []structures.Button{
-	structures.Button{
-		Pin: machine.D1,
-		ActionChain: []structures.Action{
-			&structures.MouseAction{Coordinates: [2]int{5, 0}},
-			&structures.DelayAction{Delay: time.Millisecond * 50},
-			&structures.MouseAction{Coordinates: [2]int{-5, 0}},
-		},
-		LastCall: time.Now(),
+var BaseConfig = Config{
+	PollingDelay: time.Millisecond * 50,  // define time in between polling
+	AllowRepeat:  true,                   // define if the input will be repeated when held
+	RepeatDelay:  time.Millisecond * 500, // define time in between repeats
+}
+
+var Buttons = []buttons.Button{
+	buttons.Button{
+		Name:        "D1",
+		ActionChain: "mouse##5##0##$$delay##50ms$$mouse##-5##0##",
 	},
-	structures.Button{
-		Pin:         machine.D2,
-		ActionChain: []structures.Action{},
-		LastCall:    time.Now(),
+	buttons.Button{
+		Name:        "D2",
+		ActionChain: "",
 	},
-	structures.Button{
-		Pin:         machine.D3,
-		ActionChain: []structures.Action{},
-		LastCall:    time.Now(),
+	buttons.Button{
+		Name:        "D3",
+		ActionChain: "",
 	},
-	structures.Button{
-		Pin:         machine.D4,
-		ActionChain: []structures.Action{},
-		LastCall:    time.Now(),
+	buttons.Button{
+		Name:        "D4",
+		ActionChain: "",
 	},
-	structures.Button{
-		Pin:         machine.D5,
-		ActionChain: []structures.Action{},
-		LastCall:    time.Now(),
+	buttons.Button{
+		Name:        "D5",
+		ActionChain: "",
 	},
-	structures.Button{
-		Pin:         machine.D6,
-		ActionChain: []structures.Action{},
-		LastCall:    time.Now(),
+	buttons.Button{
+		Name:        "D6",
+		ActionChain: "",
 	},
-	structures.Button{
-		Pin: machine.D7,
-		ActionChain: []structures.Action{
-			&structures.KeycodeAction{Keycodes: []keyboard.Keycode{keyboard.KeyModifierCtrl, keyboard.KeyC}},
-		},
-		LastCall: time.Now(),
+	buttons.Button{
+		Name:        "D7",
+		ActionChain: "keycode##KeyModifierCtrl##KeyC",
 	},
-	structures.Button{
-		Pin: machine.D8,
-		ActionChain: []structures.Action{
-			&structures.KeycodeAction{Keycodes: []keyboard.Keycode{keyboard.KeyModifierCtrl, keyboard.KeyV}},
-		},
-		LastCall: time.Now(),
+	buttons.Button{
+		Name:        "D8",
+		ActionChain: "keycode##KeyModifierCtrl##KeyV",
 	},
-	structures.Button{
-		Pin:         machine.D9,
-		ActionChain: []structures.Action{},
-		LastCall:    time.Now(),
+	buttons.Button{
+		Name:        "D9",
+		ActionChain: "",
 	},
-	structures.Button{
-		Pin:         machine.D10,
-		ActionChain: []structures.Action{},
-		LastCall:    time.Now(),
+	buttons.Button{
+		Name:        "D10",
+		ActionChain: "",
 	},
 }
